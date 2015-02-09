@@ -70,15 +70,18 @@ public class TaskEndpoint {
 	
 	@GET
 	@Path("/{userId}/claim/random")
-	public void claimRandom( @PathParam("user") String userId) {
+	public TaskId claimRandom( @PathParam("user") String userId) {
 		TaskId task = getRandomTasks(userId);
 		if(task != null) {
 			LOG.info("Claiming random task ["+task.getId()+"] for user ["+userId+"]");
 			taskService.claim(task.getId(), userId);
+			return task;
 		}
 		else {
 			LOG.info("No tasks to claim for user ["+userId+"]");
 		}
+		
+		return null;
 	}
 	
 	@GET
@@ -117,9 +120,14 @@ public class TaskEndpoint {
 		query.setMaxResults(1);
 		query.setFirstResult(random);
 		List<Long> ids = query.getResultList();
-		TaskId taskId = new TaskId();
-		taskId.setId(ids.get(0));
-		return taskId;
+		
+		if(ids.size() > 0) {
+			TaskId taskId = new TaskId();
+			taskId.setId(ids.get(0));
+			return taskId;
+		}
+		
+		return null;
 	}
 	
 	
