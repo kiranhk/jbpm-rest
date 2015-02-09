@@ -128,6 +128,11 @@ public class TaskEndpoint {
 		Query query = entityManagerFactory.createEntityManager().createQuery("select count(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
 		
 		Long count = (Long) query.getSingleResult();
+		if(count <= 0) {
+			//no items to get.
+			return null;
+		}
+		
 		int random = new Random().nextInt(count.intValue());
 		query = entityManagerFactory.createEntityManager().createQuery("select task.id from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
 		query.setMaxResults(1);
