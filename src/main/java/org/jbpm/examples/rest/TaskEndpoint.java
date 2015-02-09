@@ -18,19 +18,22 @@ import org.kie.api.task.TaskService;
 import org.kie.api.task.UserGroupCallback;
 import org.kie.api.task.model.Status;
 import org.kie.api.task.model.TaskSummary;
+import org.slf4j.Logger;
 
 @Path("/task")
 @Produces({MediaType.APPLICATION_XML})
-public class Endpoint {
+public class TaskEndpoint {
+	
+	private static final Logger LOG = org.slf4j.LoggerFactory.getLogger(TaskEndpoint.class);
 	
 	@Inject
-	TaskService taskService;
+	protected TaskService taskService;
 	
 	@PersistenceUnit
-	EntityManagerFactory entityManagerFactory;
+	protected EntityManagerFactory entityManagerFactory;
 	
 	@Inject
-	UserGroupCallback userGroupCallback;
+	protected UserGroupCallback userGroupCallback;
 
 	@GET
 	@Path("/query/{user}")
@@ -48,13 +51,49 @@ public class Endpoint {
 	}
 	
 	@GET
-	@Path("/fastquery/{user}")
-	public List<TaskId> getTasksQuickly(@PathParam("user") String userId) {
+	@Path("/{userId}/{taskId}/complete")
+	public void complete( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
+		taskService.complete(taskId, userId, null);
+	}
+
+	@GET
+	@Path("/{userId}/{taskId}/start")
+	public void start( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
+		taskService.start(taskId, userId);
+	}
+	
+	@GET
+	@Path("/{userId}/{taskId}/claim")
+	public void claim( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
+		taskService.claim(taskId, userId);
+	}
+	
+	@GET
+	@Path("/{userId}/claim/random")
+	public void claimRandom( @PathParam("user") String userId) {
+		TaskId task = getRandomTasks(userId);
+		if(task != null) {
+			LOG.info("Claiming random task ["+task.getId()+"] for user ["+userId+"]");
+			taskService.claim(task.getId(), userId);
+		}
+		else {
+			LOG.info("No tasks to claim for user ["+userId+"]");
+		}
+	}
+	
+	@GET
+	@Path("/list/{user}/page/{page}")
+	public List<TaskId> getPagedTasks(@PathParam("user") String userId, @PathParam("user") int page) {
+		if(page < 1) {
+			page = 1;
+		}
 		
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
 		
-		
 		Query query = entityManagerFactory.createEntityManager().createQuery("select task.id from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		query.setMaxResults(10);
+		query.setFirstResult((page-1)*10);
+		
 		List<Long> ids = query.getResultList();
 		List<TaskId> toReturn = new ArrayList<TaskId>(ids.size());
 		for (Long id : ids) {
