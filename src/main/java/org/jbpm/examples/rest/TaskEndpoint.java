@@ -14,9 +14,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import org.jbpm.examples.bean.CustomDeploymentService;
 import org.kie.api.task.TaskService;
 import org.kie.api.task.UserGroupCallback;
 import org.kie.api.task.model.Status;
+import org.kie.api.task.model.Task;
 import org.kie.api.task.model.TaskSummary;
 import org.slf4j.Logger;
 
@@ -34,6 +36,9 @@ public class TaskEndpoint {
 	
 	@Inject
 	protected UserGroupCallback userGroupCallback;
+	
+	@Inject
+	protected CustomDeploymentService customDeploymentService;
 
 	
 
@@ -64,25 +69,27 @@ public class TaskEndpoint {
 	}
 	
 	@GET
-	@Path("/{userId}/{taskId}/complete")
+	@Path("/{user}/{taskId}/complete")
 	public void complete( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
+		Task task = taskService.getTaskById(taskId);
+		customDeploymentService.getRuntimeManager(task.getTaskData().getDeploymentId());
 		taskService.complete(taskId, userId, null);
 	}
 
 	@GET
-	@Path("/{userId}/{taskId}/start")
+	@Path("/{user}/{taskId}/start")
 	public void start( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
 		taskService.start(taskId, userId);
 	}
 	
 	@GET
-	@Path("/{userId}/{taskId}/claim")
+	@Path("/{user}/{taskId}/claim")
 	public void claim( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
 		taskService.claim(taskId, userId);
 	}
 	
 	@GET
-	@Path("/{userId}/claim/random")
+	@Path("/{user}/claim/random")
 	public TaskId claimRandom( @PathParam("user") String userId) {
 		TaskId task = getRandomTasks(userId);
 		if(task != null) {
@@ -98,8 +105,25 @@ public class TaskEndpoint {
 	}
 	
 	@GET
+	@Path("/{user}/start/random")
+	public TaskId startRandom( @PathParam("user") String userId) {
+		TaskId taskId = getRandomTasks(userId);
+		if(taskId != null) {
+			LOG.info("Starting random task ["+taskId.getId()+"] for user ["+userId+"]");
+			Task task = taskService.getTaskById(taskId.getId());
+			customDeploymentService.getTaskService(task).start(task.getId(), userId);
+			return taskId;
+		}
+		else {
+			LOG.info("No tasks to claim for user ["+userId+"]");
+		}
+		
+		return null;
+	}
+	
+	@GET
 	@Path("/list/{user}/page/{page}")
-	public List<TaskId> getPagedTasks(@PathParam("user") String userId, @PathParam("user") int page) {
+	public List<TaskId> getPagedTasks(@PathParam("user") String userId, @PathParam("page") int page) {
 		if(page < 1) {
 			page = 1;
 		}
