@@ -132,7 +132,7 @@ public class TaskEndpoint {
 		
 		return (List<TaskId>)query.getResultList();
 	}
-	
+		
 	@GET
 	@Path("/random/{user}")
 	public TaskId getRandomTasks(@PathParam("user") String userId) {
@@ -144,15 +144,13 @@ public class TaskEndpoint {
 		
 		int random = new Random().nextInt(count.intValue());
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
-		Query query = entityManagerFactory.createEntityManager().createQuery("select task.id from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskId(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
 		query.setMaxResults(1);
 		query.setFirstResult(random);
-		List<Long> ids = query.getResultList();
+		List<TaskId> ids = (List<TaskId>)query.getResultList();
 		
 		if(ids.size() > 0) {
-			TaskId taskId = new TaskId();
-			taskId.setId(ids.get(0));
-			return taskId;
+			return (ids.get(0));
 		}
 		
 		return null;
