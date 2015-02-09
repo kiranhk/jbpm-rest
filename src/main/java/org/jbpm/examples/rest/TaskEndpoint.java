@@ -45,7 +45,9 @@ public class TaskEndpoint {
 	@Path("/count/{user}")
 	public Long getCount(@PathParam("user") String userId) {
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
-		Query query = entityManagerFactory.createEntityManager().createQuery("select count(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		Query query = entityManagerFactory.createEntityManager().createQuery(
+				"select count(task.id) from TaskImpl task"
+				+ " inner join task.peopleAssignments.potentialOwners as owners where owners.id = '"+group+"'");
 		
 		Long count = (Long) query.getSingleResult();
 		return count;
