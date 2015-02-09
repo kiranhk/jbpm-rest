@@ -126,18 +126,11 @@ public class TaskEndpoint {
 		
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
 		
-		Query query = entityManagerFactory.createEntityManager().createQuery("select task.id from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskId(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
 		query.setMaxResults(10);
 		query.setFirstResult((page-1)*10);
 		
-		List<Long> ids = query.getResultList();
-		List<TaskId> toReturn = new ArrayList<TaskId>(ids.size());
-		for (Long id : ids) {
-			TaskId taskId = new TaskId();
-			taskId.setId(id);
-			toReturn.add(taskId);
-		}
-		return toReturn;
+		return (List<TaskId>)query.getResultList();
 	}
 	
 	@GET
