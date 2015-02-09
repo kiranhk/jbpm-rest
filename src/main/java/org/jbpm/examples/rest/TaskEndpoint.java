@@ -45,7 +45,10 @@ public class TaskEndpoint {
 	@Path("/count/{user}")
 	public Long getCount(@PathParam("user") String userId) {
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
-		Query query = entityManagerFactory.createEntityManager().createQuery("select count(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		Query query = entityManagerFactory.createEntityManager().createQuery(
+				"select count(task.id) from TaskImpl task"
+				+ " inner join task.peopleAssignments.potentialOwners as owners where owners.id = :groupId");
+		query.setParameter("groupId", group);
 		
 		Long count = (Long) query.getSingleResult();
 		return count;
@@ -126,7 +129,10 @@ public class TaskEndpoint {
 		
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
 		
-		Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskId(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskId(task.id) from TaskImpl task "+
+				" inner join task.peopleAssignments.potentialOwners as owners where where task.taskData.status = 'Ready' and owners.id = :groupId");
+		query.setParameter("groupId", group);
+		
 		query.setMaxResults(10);
 		query.setFirstResult((page-1)*10);
 		
@@ -144,7 +150,10 @@ public class TaskEndpoint {
 		
 		int random = new Random().nextInt(count.intValue());
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
-		Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskId(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
+		Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskId(task.id) from TaskImpl task " +
+				" inner join task.peopleAssignments.potentialOwners as owners where where task.taskData.status = 'Ready' and owners.id = :groupId");
+		query.setParameter("groupId", group);
+		
 		query.setMaxResults(1);
 		query.setFirstResult(random);
 		List<TaskId> ids = (List<TaskId>)query.getResultList();
