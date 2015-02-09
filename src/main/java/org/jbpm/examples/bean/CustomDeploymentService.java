@@ -6,6 +6,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
+import javax.persistence.Query;
 
 import org.drools.compiler.kproject.ReleaseIdImpl;
 import org.kie.api.KieServices;
@@ -36,6 +37,9 @@ public class CustomDeploymentService implements DeploymentService {
 	@Inject
 	UserGroupCallback userGroupCallback;
 
+	@Inject
+	protected EntityManagerFactory emf;
+	
  
     public void deploy(DeploymentUnit deploymentUnit) {
     	LOG.info("Deploy" + deploymentUnit);
@@ -46,6 +50,10 @@ public class CustomDeploymentService implements DeploymentService {
     	LOG.info("Undeploy" + deploymentUnit);
     }
 
+    public RuntimeManager getRuntimeManager(Long taskId) {
+    	TaskMeta meta = getTaskMeta(taskId);
+    	return getRuntimeManager(meta.getDeploymentId());
+    }
     
     public RuntimeManager getRuntimeManager(String s) { 
     	LOG.info("Getting custom runtime manager");
@@ -65,14 +73,12 @@ public class CustomDeploymentService implements DeploymentService {
     	 RuntimeManagerFactory.Factory.get().newPerProcessInstanceRuntimeManager(runtimeEnvironment, s);
     	}
     	return RuntimeManagerRegistry.get().getManager(s);
-    	
     }
     
-    
-    
-    public TaskService getTaskService(Task task) {
-    	RuntimeManager runtimeManager = this.getRuntimeManager(task.getTaskData().getDeploymentId());
-    	return runtimeManager.getRuntimeEngine(new ProcessInstanceIdContext(task.getTaskData().getProcessInstanceId())).getTaskService();
+    public TaskService getTaskService(Long taskId) {
+    	TaskMeta meta = getTaskMeta(taskId);
+    	RuntimeManager runtimeManager = this.getRuntimeManager(meta.getDeploymentId());
+    	return runtimeManager.getRuntimeEngine(new ProcessInstanceIdContext(meta.getProcessInstanceId())).getTaskService();
     }
 
 	public DeployedUnit getDeployedUnit(String s) {
@@ -82,5 +88,40 @@ public class CustomDeploymentService implements DeploymentService {
      
     public Collection<DeployedUnit> getDeployedUnits() {
         return null;
+    }
+    
+    
+    public TaskMeta getTaskMeta(Long taskId) {
+    	Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskMeta(task.id, task.taskData.processInstanceId, task.taskData.deploymentId) from TaskImpl task where task.id = :taskId");
+    	query.setParameter("taskId", taskId);
+		query.setMaxResults(1);
+		
+		return (TaskMeta)query.getSingleResult();
+    }
+    
+    private class TaskMeta {
+    	private final Long taskId;
+    	private final Long processInstanceId;
+    	private final String deploymentId;
+    	
+    	public TaskMeta(Long taskId, Long processInstanceId, String deploymentId) {
+    		this.taskId = taskId;
+    		this.processInstanceId = processInstanceId;
+    		this.deploymentId = deploymentId;
+		}
+
+		public Long getTaskId() {
+			return taskId;
+		}
+
+		public Long getProcessInstanceId() {
+			return processInstanceId;
+		}
+
+		public String getDeploymentId() {
+			return deploymentId;
+		}
+    	
+    	
     }
 }

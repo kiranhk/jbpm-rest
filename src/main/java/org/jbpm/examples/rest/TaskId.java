@@ -7,6 +7,14 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class TaskId {
 	private Long id;
 
+	public TaskId() {
+
+	}
+	
+	public TaskId(Long id) {
+		this.id = id;
+	}
+	
 	@XmlElement
 	public Long getId() {
 		return id;
