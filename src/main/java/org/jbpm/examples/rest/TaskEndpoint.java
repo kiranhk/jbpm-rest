@@ -18,7 +18,6 @@ import org.jbpm.examples.bean.CustomDeploymentService;
 import org.kie.api.task.TaskService;
 import org.kie.api.task.UserGroupCallback;
 import org.kie.api.task.model.Status;
-import org.kie.api.task.model.Task;
 import org.kie.api.task.model.TaskSummary;
 import org.slf4j.Logger;
 
@@ -26,10 +25,10 @@ import org.slf4j.Logger;
 @Produces({MediaType.APPLICATION_XML})
 public class TaskEndpoint {
 	
-	private static final Logger LOG = org.slf4j.LoggerFactory.getLogger(TaskEndpoint.class);
+	@Inject 
+	protected TaskService noRuntimeManagementTaskService;
 	
-	@Inject
-	protected TaskService taskService;
+	private static final Logger LOG = org.slf4j.LoggerFactory.getLogger(TaskEndpoint.class);
 	
 	@PersistenceUnit
 	protected EntityManagerFactory entityManagerFactory;
@@ -45,7 +44,6 @@ public class TaskEndpoint {
 	@GET
 	@Path("/count/{user}")
 	public Long getCount(@PathParam("user") String userId) {
-		
 		String group = userGroupCallback.getGroupsForUser(userId, null, null).get(0);
 		Query query = entityManagerFactory.createEntityManager().createQuery("select count(task.id) from TaskImpl task where task.taskData.status = 'Ready' and '"+group+"' in elements(task.peopleAssignments.potentialOwners)");
 		
@@ -58,7 +56,7 @@ public class TaskEndpoint {
 	public List<TaskId> getTasks(@PathParam("user") String userId) {
 		List<Status> statuses = new ArrayList<Status>();
 		statuses.add(Status.Ready);
-		List<TaskSummary> tasks = taskService.getTasksAssignedAsPotentialOwnerByStatus(userId, statuses, "en-UK");
+		List<TaskSummary> tasks = noRuntimeManagementTaskService.getTasksAssignedAsPotentialOwnerByStatus(userId, statuses, "en-UK");
 		List<TaskId> toReturn = new ArrayList<TaskId>(tasks.size());
 		for (TaskSummary taskSummary : tasks) {
 			TaskId taskId = new TaskId();
@@ -71,21 +69,20 @@ public class TaskEndpoint {
 	@GET
 	@Path("/{user}/{taskId}/complete")
 	public void complete( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
-		Task task = taskService.getTaskById(taskId);
-		customDeploymentService.getRuntimeManager(task.getTaskData().getDeploymentId());
-		taskService.complete(taskId, userId, null);
+		customDeploymentService.getRuntimeManager(taskId);
+		getTaskService(taskId).complete(taskId, userId, null);
 	}
 
 	@GET
 	@Path("/{user}/{taskId}/start")
 	public void start( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
-		taskService.start(taskId, userId);
+		getTaskService(taskId).start(taskId, userId);
 	}
 	
 	@GET
 	@Path("/{user}/{taskId}/claim")
 	public void claim( @PathParam("user") String userId, @PathParam("taskId") Long taskId) {
-		taskService.claim(taskId, userId);
+		getTaskService(taskId).claim(taskId, userId);
 	}
 	
 	@GET
@@ -94,7 +91,7 @@ public class TaskEndpoint {
 		TaskId task = getRandomTasks(userId);
 		if(task != null) {
 			LOG.info("Claiming random task ["+task.getId()+"] for user ["+userId+"]");
-			taskService.claim(task.getId(), userId);
+			getTaskService(task.getId()).claim(task.getId(), userId);
 			return task;
 		}
 		else {
@@ -110,8 +107,7 @@ public class TaskEndpoint {
 		TaskId taskId = getRandomTasks(userId);
 		if(taskId != null) {
 			LOG.info("Starting random task ["+taskId.getId()+"] for user ["+userId+"]");
-			Task task = taskService.getTaskById(taskId.getId());
-			customDeploymentService.getTaskService(task).start(task.getId(), userId);
+			customDeploymentService.getTaskService(taskId.getId()).start(taskId.getId(), userId);
 			return taskId;
 		}
 		else {
@@ -169,5 +165,7 @@ public class TaskEndpoint {
 		return null;
 	}
 	
-	
+	protected TaskService getTaskService(Long taskId) {
+		return customDeploymentService.getTaskService(taskId);
+	}
 }
