@@ -154,6 +154,7 @@
 		</pluginRepository>
 	</pluginRepositories>
 	<build>
+	<finalName>jbpm6-rest</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.jboss.as.plugins</groupId>

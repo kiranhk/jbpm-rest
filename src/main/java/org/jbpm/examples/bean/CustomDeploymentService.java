@@ -92,36 +92,12 @@ public class CustomDeploymentService implements DeploymentService {
     
     
     public TaskMeta getTaskMeta(Long taskId) {
-    	Query query = entityManagerFactory.createEntityManager().createQuery("select new TaskMeta(task.id, task.taskData.processInstanceId, task.taskData.deploymentId) from TaskImpl task where task.id = :taskId");
+    	Query query = entityManagerFactory.createEntityManager().createQuery("select new org.jbpm.examples.bean.TaskMeta(task.id, task.taskData.processInstanceId, task.taskData.deploymentId) from TaskImpl task where task.id = :taskId");
     	query.setParameter("taskId", taskId);
 		query.setMaxResults(1);
 		
 		return (TaskMeta)query.getSingleResult();
     }
     
-    private class TaskMeta {
-    	private final Long taskId;
-    	private final Long processInstanceId;
-    	private final String deploymentId;
-    	
-    	public TaskMeta(Long taskId, Long processInstanceId, String deploymentId) {
-    		this.taskId = taskId;
-    		this.processInstanceId = processInstanceId;
-    		this.deploymentId = deploymentId;
-		}
-
-		public Long getTaskId() {
-			return taskId;
-		}
-
-		public Long getProcessInstanceId() {
-			return processInstanceId;
-		}
-
-		public String getDeploymentId() {
-			return deploymentId;
-		}
-    	
-    	
-    }
+   
 }
